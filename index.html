@@ -24,6 +24,21 @@
   input[type=number] { background:#1f1f1f; color:#fff; border:1px solid #444; border-radius:6px; padding:6px 10px; width:220px; }
   .subtle { color:#bbb; font-size:12px; }
   .ticknote { color:#bbb; font-size:12px; margin-left: 210px; }
+
+  /* --- Info box & modal --- */
+  .topRow { display: flex; gap: 20px; align-items: stretch; flex-wrap: wrap; }
+  @media (min-width: 1024px) { .topRow { flex-wrap: nowrap; } }
+  .info-card { background:#2a2a2a; border-radius:12px; padding:14px; margin:14px 0; min-width:260px; flex: 0 0 260px; }
+  .info-card h3 { margin: 0 0 8px 0; font-size: 16px; }
+  .infoBtn { background:#1f1f1f; color:#fff; border:1px solid #444; border-radius:8px; padding:10px 12px; cursor:pointer; font-weight:600; width:100%; }
+  .infoBtn:hover { background:#2c2c2c; }
+  .modalOverlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999; }
+  .modal { background:#1f1f1f; color:#eee; border:1px solid #444; border-radius:12px; max-width:820px; width:92vw; padding:18px; box-shadow:0 10px 30px rgba(0,0,0,0.4); }
+  .modal h3 { margin:0 0 8px 0; font-size:18px; }
+  .modal .close { float:right; cursor:pointer; border:0; background:transparent; color:#bbb; font-size:20px; }
+  .modal p, .modal li { line-height:1.4; }
+  .modal code { background:#111; padding:2px 5px; border-radius:6px; }
+
 </style>
 </head>
 <body>
@@ -67,6 +82,13 @@
 <div>
 </div>
 </div>
+
+<div id="infoBox" class="info-card">
+  <h3>About this calculator</h3>
+  <button class="infoBtn" id="infoBtn" aria-haspopup="dialog" aria-controls="infoModal">?</button>
+  <div class="subtle" style="margin-top:8px;">Click for math & assumptions</div>
+</div>
+
 <!-- Charts -->
 <div class="charts">
 <div class="card">
@@ -338,5 +360,78 @@ function markerPlugin(getXIdx, getSBPercent){
   lastMcapSource = 'slider';
   updateAll();
 </script>
+
+<div id="infoModalOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
+  <div class="modal">
+    <button class="close" id="infoCloseBtn" aria-label="Close">✕</button>
+    <h3 id="infoModalTitle">Calculator assumptions & math</h3>
+    <p><strong>Core assumption:</strong> When computing the required fee/tx, the network is assumed to be <em>fully utilized</em> (i.e., blocks are full and daily throughput is at capacity).</p>
+    <ul>
+      <li><strong>Bitcoin throughput:</strong> fixed at <code>600,000 tx/day</code>.</li>
+      <li><strong>Kaspa throughput:</strong> depends on the selected BPS button:
+        <ul>
+          <li><code>10&nbsp;bps</code> → <code>259,200,000 tx/day</code></li>
+          <li><code>32&nbsp;bps</code> → <code>829,440,000 tx/day</code></li>
+          <li><code>100&nbsp;bps</code> → <code>2,592,000,000 tx/day</code></li>
+        </ul>
+      </li>
+    </ul>
+    <h3 style="margin-top:14px;">Math (security budget target)</h3>
+    <ol>
+      <li><strong>Prices</strong> are implied from the market cap slider/input and each chain’s circulating supply for the selected date:<br/>
+        <code>Price = Market&nbsp;Cap / Circ.&nbsp;Supply</code>
+      </li>
+      <li><strong>Target annual security budget (USD):</strong><br/>
+        <code>SB<sub>target,year</sub> = (Target&nbsp;SB&nbsp;%) × Market&nbsp;Cap</code>
+      </li>
+      <li><strong>Block subsidy value (USD/year):</strong><br/>
+        <code>Subsidy<sub>USD,year</sub> = Yearly&nbsp;emissions&nbsp;(coins) × Price</code>
+      </li>
+      <li><strong>Extra USD needed from fees (annual):</strong><br/>
+        <code>Extra<sub>USD,year</sub> = max(0, SB<sub>target,year</sub> − Subsidy<sub>USD,year</sub>)</code>
+      </li>
+      <li><strong>Required fees per tx (USD):</strong> assuming full blocks / full throughput:<br/>
+        <code>Fee/tx<sub>USD</sub> = (Extra<sub>USD,year</sub> / 365) / Tx/day</code>
+      </li>
+      <li><strong>Required fees per tx (native coin):</strong><br/>
+        <code>Fee/tx<sub>coin</sub> = Fee/tx<sub>USD</sub> ÷ Price</code>
+      </li>
+    </ol>
+    <p class="subtle">Circulating supplies and emissions (daily/yearly) are the preloaded arrays in the page and change over time with the date slider.</p>
+  </div>
+</div>
+
+
+<script>
+// Group the calculator and the info card side-by-side in a new row
+(function(){
+  const wrap = document.querySelector('.wrap');
+  const calc = document.querySelector('.calc');
+  const info = document.getElementById('infoBox');
+  if (wrap && calc && info) {
+    const row = document.createElement('div');
+    row.className = 'topRow';
+    wrap.insertBefore(row, calc);
+    row.appendChild(calc);
+    row.appendChild(info);
+  }
+})();
+
+// Modal open/close behavior
+(function(){
+  const btn = document.getElementById('infoBtn');
+  const overlay = document.getElementById('infoModalOverlay');
+  const closeBtn = document.getElementById('infoCloseBtn');
+  function openModal(){ overlay.style.display = 'flex'; }
+  function closeModal(){ overlay.style.display = 'none'; }
+  if (btn && overlay && closeBtn){
+    btn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+  }
+})();
+</script>
+
 </body>
 </html>
